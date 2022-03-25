@@ -3,11 +3,11 @@
   "title": "Config",
   "type": "object",
   "required": [
-    "target_address",
+    "withdraw_address",
     "withdraw_delay"
   ],
   "properties": {
-    "target_address": {
+    "withdraw_address": {
       "$ref": "#/definitions/Addr"
     },
     "withdraw_delay": {

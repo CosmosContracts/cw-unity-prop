@@ -24,10 +24,10 @@ pub fn instantiate(
     _info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
-    let target_address = deps.api.addr_validate(&msg.target_address)?;
+    let withdraw_address = deps.api.addr_validate(&msg.withdraw_address)?;
 
     let config = Config {
-        target_address: target_address.clone(),
+        withdraw_address: withdraw_address.clone(),
         withdraw_delay: msg.withdraw_delay,
     };
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
@@ -35,7 +35,7 @@ pub fn instantiate(
 
     Ok(Response::new()
         .add_attribute("method", "instantiate")
-        .add_attribute("withdraw_address", target_address)
+        .add_attribute("withdraw_address", withdraw_address)
         .add_attribute("withdraw_delay", msg.withdraw_delay.to_string()))
 }
 
@@ -82,7 +82,7 @@ pub fn start_withdraw(deps: DepsMut, env: Env) -> Result<Response, ContractError
 pub fn execute_withdraw(deps: DepsMut, env: Env) -> Result<Response, ContractError> {
     // get withdraw address
     let config = CONFIG.load(deps.storage)?;
-    let withdraw_address = config.target_address;
+    let withdraw_address = config.withdraw_address;
 
     // this returns Vec<Coin> for the contract's holdings
     let amount = deps.querier.query_all_balances(&env.contract.address)?;

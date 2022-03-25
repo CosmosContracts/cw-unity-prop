@@ -1,0 +1,19 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "SudoMsg",
+  "description": "This should only be sudo-callable by the governance module of the chain. Executes an immediate burn of any funds held by the contract",
+  "anyOf": [
+    {
+      "type": "object",
+      "required": [
+        "execute_burn"
+      ],
+      "properties": {
+        "execute_burn": {
+          "type": "object"
+        }
+      },
+      "additionalProperties": false
+    }
+  ]
+}

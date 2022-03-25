@@ -6,8 +6,8 @@ use serde::{Deserialize, Serialize};
 /// The contract will have no admin so this will need to be set correctly
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InstantiateMsg {
-    pub target_address: String, // CCN
-    pub withdraw_delay: u64,    // Withdraw delay in days
+    pub withdraw_address: String, // the address whose funds are locked in this contract
+    pub withdraw_delay: u64,      // withdraw delay in days
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

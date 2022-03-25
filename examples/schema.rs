@@ -3,7 +3,10 @@ use std::fs::create_dir_all;
 
 use cosmwasm_schema::{export_schema, remove_schemas, schema_for};
 
-use cw_unity_prop::msg::{ExecuteMsg, InstantiateMsg, QueryMsg, WithdrawalReadyResponse};
+use cw_unity_prop::msg::{
+    ExecuteMsg, InstantiateMsg, QueryMsg, SudoMsg, WithdrawalReadyResponse,
+    WithdrawalTimestampResponse,
+};
 use cw_unity_prop::state::Config;
 
 fn main() {
@@ -14,7 +17,9 @@ fn main() {
 
     export_schema(&schema_for!(InstantiateMsg), &out_dir);
     export_schema(&schema_for!(ExecuteMsg), &out_dir);
+    export_schema(&schema_for!(SudoMsg), &out_dir);
     export_schema(&schema_for!(QueryMsg), &out_dir);
     export_schema(&schema_for!(Config), &out_dir);
+    export_schema(&schema_for!(WithdrawalTimestampResponse), &out_dir);
     export_schema(&schema_for!(WithdrawalReadyResponse), &out_dir);
 }
