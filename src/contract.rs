@@ -1,7 +1,7 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    coins, ensure_eq, to_binary, BankMsg, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo,
+    coins, ensure_eq, to_binary, BankMsg, Binary, Coin, CosmosMsg, Deps, DepsMut, Env, MessageInfo,
     Response, StdResult, Timestamp, Uint128,
 };
 use cw2::set_contract_version;
@@ -151,7 +151,7 @@ pub fn sudo(deps: DepsMut, env: Env, msg: SudoMsg) -> Result<Response, ContractE
 pub fn execute_burn(deps: DepsMut, env: Env) -> Result<Response, ContractError> {
     // this returns Vec<Coin>
     // in this case for the contract's holdings
-    let amount = deps.querier.query_all_balances(&env.contract.address)?;
+    let amount: Vec<Coin> = deps.querier.query_all_balances(&env.contract.address)?;
 
     // create a burn msg struct
     let burn_msg = BankMsg::Burn { amount };
@@ -184,7 +184,8 @@ pub fn execute_send(
     // validate supplied address
     let validated_address = deps.api.addr_validate(&recipient)?;
 
-    let amount = coins(amount.u128(), native_denom);
+    // create coins vec
+    let amount: Vec<Coin> = coins(amount.u128(), native_denom);
 
     // create a send
     let send_msg = BankMsg::Send {
