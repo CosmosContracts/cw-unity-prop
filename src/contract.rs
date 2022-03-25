@@ -1,8 +1,8 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    ensure_eq, to_binary, BankMsg, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Response,
-    StdResult, Timestamp,
+    coins, ensure_eq, to_binary, BankMsg, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo,
+    Response, StdResult, Timestamp, Uint128,
 };
 use cw2::set_contract_version;
 
@@ -29,6 +29,7 @@ pub fn instantiate(
     let config = Config {
         withdraw_address: withdraw_address.clone(),
         withdraw_delay_in_days: msg.withdraw_delay_in_days,
+        native_denom: msg.native_denom,
     };
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
     CONFIG.save(deps.storage, &config)?;
@@ -141,6 +142,7 @@ pub fn execute_withdraw(
 pub fn sudo(deps: DepsMut, env: Env, msg: SudoMsg) -> Result<Response, ContractError> {
     match msg {
         SudoMsg::ExecuteBurn {} => execute_burn(deps, env),
+        SudoMsg::ExecuteSend { recipient, amount } => execute_send(deps, env, recipient, amount),
     }
 }
 
@@ -158,7 +160,44 @@ pub fn execute_burn(deps: DepsMut, env: Env) -> Result<Response, ContractError> 
     let msgs: Vec<CosmosMsg> = vec![burn_msg.into()];
 
     let res = Response::new()
+        .add_attribute("message_type", "sudo")
         .add_attribute("action", "burn")
+        .add_messages(msgs);
+    Ok(res)
+}
+
+// looks familiar?
+// yep, basically the same logic, isn't it
+// allows the community to send funds somewhere
+pub fn execute_send(
+    deps: DepsMut,
+    _env: Env,
+    recipient: String,
+    amount: Uint128,
+) -> Result<Response, ContractError> {
+    // get config
+    let config = CONFIG.load(deps.storage)?;
+
+    // get native denom
+    let native_denom = config.native_denom;
+
+    // validate supplied address
+    let validated_address = deps.api.addr_validate(&recipient)?;
+
+    let amount = coins(amount.u128(), native_denom);
+
+    // create a send
+    let send_msg = BankMsg::Send {
+        to_address: validated_address.to_string(),
+        amount,
+    };
+
+    // then msg we can add to Response
+    let msgs: Vec<CosmosMsg> = vec![send_msg.into()];
+
+    let res = Response::new()
+        .add_attribute("message_type", "sudo")
+        .add_attribute("action", "send")
         .add_messages(msgs);
     Ok(res)
 }

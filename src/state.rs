@@ -8,6 +8,7 @@ use cw_storage_plus::Item;
 pub struct Config {
     pub withdraw_address: Addr,
     pub withdraw_delay_in_days: u64,
+    pub native_denom: String,
 }
 
 pub const CONFIG: Item<Config> = Item::new("config");

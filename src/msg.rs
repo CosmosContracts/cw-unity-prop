@@ -1,4 +1,4 @@
-use cosmwasm_std::Timestamp;
+use cosmwasm_std::{Timestamp, Uint128};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 pub struct InstantiateMsg {
     pub withdraw_address: String, // the address whose funds are locked in this contract
     pub withdraw_delay_in_days: u64, // withdraw delay in days
+    pub native_denom: String,     // native chain denom - presumably ujuno
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -29,6 +30,9 @@ pub enum ExecuteMsg {
 pub enum SudoMsg {
     /// Executes an immediate burn of any funds held by the contract
     ExecuteBurn {},
+    /// Sends the specified amount from the contract balance
+    /// to a nominated address
+    ExecuteSend { recipient: String, amount: Uint128 },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

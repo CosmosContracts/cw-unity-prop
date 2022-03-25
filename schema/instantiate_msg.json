@@ -4,10 +4,14 @@
   "description": "Basic configuration for the contract The contract will have no admin so this will need to be set correctly",
   "type": "object",
   "required": [
+    "native_denom",
     "withdraw_address",
     "withdraw_delay_in_days"
   ],
   "properties": {
+    "native_denom": {
+      "type": "string"
+    },
     "withdraw_address": {
       "type": "string"
     },

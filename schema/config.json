@@ -3,10 +3,14 @@
   "title": "Config",
   "type": "object",
   "required": [
+    "native_denom",
     "withdraw_address",
     "withdraw_delay_in_days"
   ],
   "properties": {
+    "native_denom": {
+      "type": "string"
+    },
     "withdraw_address": {
       "$ref": "#/definitions/Addr"
     },

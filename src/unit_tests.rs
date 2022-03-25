@@ -22,6 +22,7 @@ mod tests {
         let msg = InstantiateMsg {
             withdraw_address,
             withdraw_delay_in_days,
+            native_denom: NATIVE_DENOM.to_string(),
         };
 
         // the person instantiating
@@ -38,6 +39,7 @@ mod tests {
             Config {
                 withdraw_address: validated_addr,
                 withdraw_delay_in_days,
+                native_denom: NATIVE_DENOM.to_string(),
             },
             contract_config
         );
@@ -59,6 +61,7 @@ mod tests {
         let msg = InstantiateMsg {
             withdraw_address: withdraw_address.clone(),
             withdraw_delay_in_days,
+            native_denom: NATIVE_DENOM.to_string(),
         };
 
         // the person instantiating
@@ -124,6 +127,7 @@ mod tests {
         let msg = InstantiateMsg {
             withdraw_address: withdraw_address.clone(),
             withdraw_delay_in_days,
+            native_denom: NATIVE_DENOM.to_string(),
         };
 
         // the person instantiating
@@ -186,6 +190,7 @@ mod tests {
         let msg = InstantiateMsg {
             withdraw_address: withdraw_address.clone(),
             withdraw_delay_in_days,
+            native_denom: NATIVE_DENOM.to_string(),
         };
 
         // the person instantiating
