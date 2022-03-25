@@ -1,2 +1,9 @@
 # cw-unity-prop
-Implements the Smart Contract for the Unity Proposal.
+
+A CosmWasm Smart Contract to implement the Juno Unity Prop.
+
+## Developing
+
+Develop features and write unit tests.
+
+Before committing, run `./check.sh`.
