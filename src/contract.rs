@@ -1,8 +1,8 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, BankMsg, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Response, StdResult,
-    Timestamp,
+    ensure_eq, to_binary, BankMsg, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Response,
+    StdResult, Timestamp,
 };
 use cw2::set_contract_version;
 
@@ -43,20 +43,32 @@ pub fn instantiate(
 pub fn execute(
     deps: DepsMut,
     env: Env,
-    _info: MessageInfo,
+    info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::StartWithdraw {} => start_withdraw(deps, env),
-        ExecuteMsg::ExecuteWithdraw {} => execute_withdraw(deps, env),
+        ExecuteMsg::StartWithdraw {} => start_withdraw(deps, env, info),
+        ExecuteMsg::ExecuteWithdraw {} => execute_withdraw(deps, env, info),
     }
 }
 
 // this sets the withdraw delay
 // note that it does not withdraw funds immediately
-pub fn start_withdraw(deps: DepsMut, env: Env) -> Result<Response, ContractError> {
+pub fn start_withdraw(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+) -> Result<Response, ContractError> {
     // get config
     let config = CONFIG.load(deps.storage)?;
+    let withdraw_address = config.withdraw_address;
+
+    // before continuing, only withdraw_address can call this
+    ensure_eq!(
+        info.sender,
+        withdraw_address,
+        ContractError::Unauthorized {}
+    );
 
     // get number of days delay
     let delay_in_days: u64 = config.withdraw_delay_in_days;
@@ -79,10 +91,21 @@ pub fn start_withdraw(deps: DepsMut, env: Env) -> Result<Response, ContractError
 }
 
 // this allows you to withdraw if the withdraw delay has passed
-pub fn execute_withdraw(deps: DepsMut, env: Env) -> Result<Response, ContractError> {
+pub fn execute_withdraw(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+) -> Result<Response, ContractError> {
     // get withdraw address
     let config = CONFIG.load(deps.storage)?;
     let withdraw_address = config.withdraw_address;
+
+    // before continuing, only withdraw_address can call this
+    ensure_eq!(
+        info.sender,
+        withdraw_address,
+        ContractError::Unauthorized {}
+    );
 
     // this returns Vec<Coin> for the contract's holdings
     let amount = deps.querier.query_all_balances(&env.contract.address)?;
@@ -172,73 +195,88 @@ fn query_withdraw_ready(deps: Deps, env: Env) -> StdResult<WithdrawalReadyRespon
     })
 }
 
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-//     use cosmwasm_std::testing::{mock_dependencies_with_balance, mock_env, mock_info};
-//     use cosmwasm_std::{coins, from_binary};
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
+    use cosmwasm_std::{from_binary, Addr};
 
-//     #[test]
-//     fn proper_initialization() {
-//         let mut deps = mock_dependencies_with_balance(&coins(2, "token"));
+    #[test]
+    fn initialization() {
+        let mut deps = mock_dependencies();
 
-//         let msg = InstantiateMsg { count: 17 };
-//         let info = mock_info("creator", &coins(1000, "earth"));
+        let withdraw_address = String::from("gordon-gekko-address"); // in reality this would be e.g. juno16g2rahf5846rxzp3fwlswy08fz8ccuwk03k57y
+        let validated_addr = Addr::unchecked(&withdraw_address);
+        let withdraw_delay_in_days = 28; // this is what we are expecting to set it to
 
-//         // we can just call .unwrap() to assert this was a success
-//         let res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
-//         assert_eq!(0, res.messages.len());
+        let msg = InstantiateMsg {
+            withdraw_address,
+            withdraw_delay_in_days,
+        };
 
-//         // it worked, let's query the state
-//         let res = query(deps.as_ref(), mock_env(), QueryMsg::GetCount {}).unwrap();
-//         let value: CountResponse = from_binary(&res).unwrap();
-//         assert_eq!(17, value.count);
-//     }
+        // the person instantiating
+        let instantiate_info = mock_info("bud-fox-address", &[]);
 
-//     #[test]
-//     fn increment() {
-//         let mut deps = mock_dependencies_with_balance(&coins(2, "token"));
+        // call .unwrap() to assert this was a success
+        let res = instantiate(deps.as_mut(), mock_env(), instantiate_info, msg).unwrap();
+        assert_eq!(0, res.messages.len());
 
-//         let msg = InstantiateMsg { count: 17 };
-//         let info = mock_info("creator", &coins(2, "token"));
-//         let _res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
+        // query state
+        let res = query(deps.as_ref(), mock_env(), QueryMsg::GetConfig {}).unwrap();
+        let contract_config: Config = from_binary(&res).unwrap();
+        assert_eq!(
+            Config {
+                withdraw_address: validated_addr,
+                withdraw_delay_in_days,
+            },
+            contract_config
+        );
+    }
 
-//         // beneficiary can release it
-//         let info = mock_info("anyone", &coins(2, "token"));
-//         let msg = ExecuteMsg::Increment {};
-//         let _res = execute(deps.as_mut(), mock_env(), info, msg).unwrap();
+    // #[test]
+    // fn start_withdraw() {
+    //     let mut deps = mock_dependencies();
 
-//         // should increase counter by 1
-//         let res = query(deps.as_ref(), mock_env(), QueryMsg::GetCount {}).unwrap();
-//         let value: CountResponse = from_binary(&res).unwrap();
-//         assert_eq!(18, value.count);
-//     }
+    //     let withdraw_address = String::from("gordon-gekko-address"); // in reality this would be e.g. juno16g2rahf5846rxzp3fwlswy08fz8ccuwk03k57y
+    //     let _validated_addr = Addr::unchecked(&withdraw_address);
+    //     let withdraw_delay_in_days = 28; // this is what we are expecting to set it to
 
-//     #[test]
-//     fn reset() {
-//         let mut deps = mock_dependencies_with_balance(&coins(2, "token"));
+    //     let msg = InstantiateMsg {
+    //         withdraw_address: withdraw_address.clone(),
+    //         withdraw_delay_in_days,
+    //     };
 
-//         let msg = InstantiateMsg { count: 17 };
-//         let info = mock_info("creator", &coins(2, "token"));
-//         let _res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
+    //     // the person instantiating
+    //     let instantiate_info = mock_info("bud-fox-address", &[]);
 
-//         // beneficiary can release it
-//         let unauth_info = mock_info("anyone", &coins(2, "token"));
-//         let msg = ExecuteMsg::Reset { count: 5 };
-//         let res = execute(deps.as_mut(), mock_env(), unauth_info, msg);
-//         match res {
-//             Err(ContractError::Unauthorized {}) => {}
-//             _ => panic!("Must return unauthorized error"),
-//         }
+    //     // call .unwrap() to assert this was a success
+    //     let res = instantiate(deps.as_mut(), mock_env(), instantiate_info, msg).unwrap();
+    //     assert_eq!(0, res.messages.len());
 
-//         // only the original creator can reset the counter
-//         let auth_info = mock_info("creator", &coins(2, "token"));
-//         let msg = ExecuteMsg::Reset { count: 5 };
-//         let _res = execute(deps.as_mut(), mock_env(), auth_info, msg).unwrap();
+    //     // only withdraw_address can call
+    //     let info = mock_info(&withdraw_address, &[]);
+    //     let msg = ExecuteMsg::StartWithdraw {};
+    //     let _res = execute(deps.as_mut(), mock_env(), info, msg).unwrap();
 
-//         // should now be 5
-//         let res = query(deps.as_ref(), mock_env(), QueryMsg::GetCount {}).unwrap();
-//         let value: CountResponse = from_binary(&res).unwrap();
-//         assert_eq!(5, value.count);
-//     }
-// }
+    //     // should increase counter by 1
+    //     let res = query(
+    //         deps.as_ref(),
+    //         mock_env(),
+    //         QueryMsg::GetWithdrawalReadyTime {},
+    //     )
+    //     .unwrap();
+    //     let value: WithdrawalTimestampResponse = from_binary(&res).unwrap();
+
+    //     // 28 days time from 'now', where 'now' is zero
+    //     let delay_in_seconds = 28u64 * 86400u64;
+    //     let twenty_eight_days_from_now_timestamp =
+    //         Timestamp::from_seconds(0).plus_seconds(delay_in_seconds);
+
+    //     assert_eq!(
+    //         WithdrawalTimestampResponse {
+    //             withdrawal_ready_timestamp: twenty_eight_days_from_now_timestamp,
+    //         },
+    //         value
+    //     );
+    // }
+}

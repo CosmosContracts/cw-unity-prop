@@ -24,10 +24,10 @@ pub enum ExecuteMsg {
 
 /// This should only be sudo-callable by the governance
 /// module of the chain.
-/// Executes an immediate burn of any funds held by the contract
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum SudoMsg {
+    /// Executes an immediate burn of any funds held by the contract
     ExecuteBurn {},
 }
 
