@@ -3,34 +3,40 @@
   "title": "ExecuteMsg",
   "anyOf": [
     {
+      "description": "Can be run by the admin_address Starts the withdraw process and creates a timestamp of when the funds will be ready for claim",
       "type": "object",
       "required": [
-        "increment"
+        "start_withdraw"
       ],
       "properties": {
-        "increment": {
+        "start_withdraw": {
           "type": "object"
         }
       },
       "additionalProperties": false
     },
     {
+      "description": "When the funds are ready to be claimed, this allows them to actually be claimed",
       "type": "object",
       "required": [
-        "reset"
+        "execute_withdraw"
       ],
       "properties": {
-        "reset": {
-          "type": "object",
-          "required": [
-            "count"
-          ],
-          "properties": {
-            "count": {
-              "type": "integer",
-              "format": "int32"
-            }
-          }
+        "execute_withdraw": {
+          "type": "object"
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "This should only be sudo-callable by the governance module of the chain. Executes an immediate burn of any funds held by the contract",
+      "type": "object",
+      "required": [
+        "execute_burn"
+      ],
+      "properties": {
+        "execute_burn": {
+          "type": "object"
         }
       },
       "additionalProperties": false

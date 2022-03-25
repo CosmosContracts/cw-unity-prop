@@ -3,12 +3,26 @@
   "title": "QueryMsg",
   "anyOf": [
     {
+      "description": "This returns the configured contract info",
       "type": "object",
       "required": [
-        "get_count"
+        "get_config"
       ],
       "properties": {
-        "get_count": {
+        "get_config": {
+          "type": "object"
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "If a withdrawal has been initiated, this gets the timestamp that it will be ready to claim",
+      "type": "object",
+      "required": [
+        "get_withdrawal_ready_time"
+      ],
+      "properties": {
+        "get_withdrawal_ready_time": {
           "type": "object"
         }
       },

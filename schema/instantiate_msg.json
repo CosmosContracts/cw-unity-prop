@@ -1,12 +1,17 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "InstantiateMsg",
+  "description": "Basic configuration for the contract The contract will have no admin so this will need to be set correctly",
   "type": "object",
   "required": [
-    "count"
+    "admin_address",
+    "withdraw_delay"
   ],
   "properties": {
-    "count": {
+    "admin_address": {
+      "type": "string"
+    },
+    "withdraw_delay": {
       "type": "integer",
       "format": "int32"
     }
