@@ -27,6 +27,19 @@
         }
       },
       "additionalProperties": false
+    },
+    {
+      "description": "Checks if a withdrawal is possible yet returns a bool response",
+      "type": "object",
+      "required": [
+        "is_withdrawal_ready"
+      ],
+      "properties": {
+        "is_withdrawal_ready": {
+          "type": "object"
+        }
+      },
+      "additionalProperties": false
     }
   ]
 }

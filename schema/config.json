@@ -3,16 +3,17 @@
   "title": "Config",
   "type": "object",
   "required": [
-    "admin_address",
+    "target_address",
     "withdraw_delay"
   ],
   "properties": {
-    "admin_address": {
+    "target_address": {
       "$ref": "#/definitions/Addr"
     },
     "withdraw_delay": {
       "type": "integer",
-      "format": "int32"
+      "format": "uint64",
+      "minimum": 0.0
     }
   },
   "definitions": {

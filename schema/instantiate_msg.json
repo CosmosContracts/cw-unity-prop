@@ -4,16 +4,17 @@
   "description": "Basic configuration for the contract The contract will have no admin so this will need to be set correctly",
   "type": "object",
   "required": [
-    "admin_address",
+    "target_address",
     "withdraw_delay"
   ],
   "properties": {
-    "admin_address": {
+    "target_address": {
       "type": "string"
     },
     "withdraw_delay": {
       "type": "integer",
-      "format": "int32"
+      "format": "uint64",
+      "minimum": 0.0
     }
   }
 }

@@ -9,6 +9,9 @@ pub enum ContractError {
     #[error("Unauthorized")]
     Unauthorized {},
 
+    #[error("Withdrawal not ready - wait until after timeout has passed")]
+    WithdrawalNotReady {},
+
     #[error("Custom Error val: {val:?}")]
     CustomError { val: String },
 }

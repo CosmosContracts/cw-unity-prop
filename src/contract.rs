@@ -2,11 +2,15 @@
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
     to_binary, BankMsg, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Response, StdResult,
+    Timestamp,
 };
 use cw2::set_contract_version;
 
 use crate::error::ContractError;
-use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg, WithdrawalReadyResponse};
+use crate::msg::{
+    ExecuteMsg, InstantiateMsg, QueryMsg, SudoMsg, WithdrawalReadyResponse,
+    WithdrawalTimestampResponse,
+};
 use crate::state::{Config, CONFIG, WITHDRAWAL_READY};
 
 // version info for migration info
@@ -20,10 +24,10 @@ pub fn instantiate(
     _info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
-    let validated_admin = deps.api.addr_validate(&msg.admin_address)?;
+    let target_address = deps.api.addr_validate(&msg.target_address)?;
 
     let config = Config {
-        admin_address: validated_admin.clone(),
+        target_address: target_address.clone(),
         withdraw_delay: msg.withdraw_delay,
     };
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
@@ -31,7 +35,7 @@ pub fn instantiate(
 
     Ok(Response::new()
         .add_attribute("method", "instantiate")
-        .add_attribute("admin", validated_admin)
+        .add_attribute("withdraw_address", target_address)
         .add_attribute("withdraw_delay", msg.withdraw_delay.to_string()))
 }
 
@@ -39,22 +43,82 @@ pub fn instantiate(
 pub fn execute(
     deps: DepsMut,
     env: Env,
-    info: MessageInfo,
+    _info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::StartWithdraw {} => start_withdraw(deps, info),
-        ExecuteMsg::ExecuteWithdraw {} => execute_withdraw(deps, info),
-        ExecuteMsg::ExecuteBurn {} => execute_burn(deps, env),
+        ExecuteMsg::StartWithdraw {} => start_withdraw(deps, env),
+        ExecuteMsg::ExecuteWithdraw {} => execute_withdraw(deps, env),
     }
 }
 
-pub fn start_withdraw(_deps: DepsMut, _info: MessageInfo) -> Result<Response, ContractError> {
-    Ok(Response::default())
+// this sets the withdraw delay
+// note that it does not withdraw funds immediately
+pub fn start_withdraw(deps: DepsMut, env: Env) -> Result<Response, ContractError> {
+    // get config
+    let config = CONFIG.load(deps.storage)?;
+
+    // get number of days delay
+    let delay_in_days: u64 = config.withdraw_delay;
+
+    // do some really simple maths
+    let seconds_in_day = 86400u64;
+    let delay_in_seconds = delay_in_days * seconds_in_day;
+
+    // when is 'now'?
+    let now: Timestamp = env.block.time;
+
+    // calculate now + configured days (in seconds)
+    let rewards_ready_at: Timestamp = now.plus_seconds(delay_in_seconds);
+
+    WITHDRAWAL_READY.save(deps.storage, &rewards_ready_at)?;
+
+    Ok(Response::new()
+        .add_attribute("action", "start_withdraw")
+        .add_attribute("withdrawal_ready_timestamp", rewards_ready_at.to_string()))
 }
 
-pub fn execute_withdraw(_deps: DepsMut, _info: MessageInfo) -> Result<Response, ContractError> {
-    Ok(Response::default())
+// this allows you to withdraw if the withdraw delay has passed
+pub fn execute_withdraw(deps: DepsMut, env: Env) -> Result<Response, ContractError> {
+    // get withdraw address
+    let config = CONFIG.load(deps.storage)?;
+    let withdraw_address = config.target_address;
+
+    // this returns Vec<Coin> for the contract's holdings
+    let amount = deps.querier.query_all_balances(&env.contract.address)?;
+
+    // get rewards ready timestamp
+    let withdrawal_ready_timestamp = WITHDRAWAL_READY.load(deps.storage)?;
+
+    // check if we are after that time
+    let withdrawal_claimable = env.block.time > withdrawal_ready_timestamp;
+
+    // dispatch Response or ContractError
+    match withdrawal_claimable {
+        true => {
+            // set up a bank send to the withdraw address
+            // from this contract
+            // for everything held by the contract
+            let msgs: Vec<CosmosMsg> = vec![BankMsg::Send {
+                to_address: withdraw_address.to_string(),
+                amount,
+            }
+            .into()];
+
+            Ok(Response::new()
+                .add_attribute("action", "execute_withdraw")
+                .add_attribute("withdraw_address", withdraw_address)
+                .add_messages(msgs))
+        }
+        false => Err(ContractError::WithdrawalNotReady {}),
+    }
+}
+
+#[cfg_attr(not(feature = "library"), entry_point)]
+pub fn sudo(deps: DepsMut, env: Env, msg: SudoMsg) -> Result<Response, ContractError> {
+    match msg {
+        SudoMsg::ExecuteBurn {} => execute_burn(deps, env),
+    }
 }
 
 // this is the verbose way of doing this
@@ -77,10 +141,11 @@ pub fn execute_burn(deps: DepsMut, env: Env) -> Result<Response, ContractError> 
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::GetConfig {} => to_binary(&query_config(deps)?),
-        QueryMsg::GetWithdrawalReadyTime {} => to_binary(&query_withdraw_ready(deps)?),
+        QueryMsg::GetWithdrawalReadyTime {} => to_binary(&get_withdraw_ready(deps)?),
+        QueryMsg::IsWithdrawalReady {} => to_binary(&query_withdraw_ready(deps, env)?),
     }
 }
 
@@ -89,10 +154,21 @@ fn query_config(deps: Deps) -> StdResult<Config> {
     Ok(config)
 }
 
-fn query_withdraw_ready(deps: Deps) -> StdResult<WithdrawalReadyResponse> {
+fn get_withdraw_ready(deps: Deps) -> StdResult<WithdrawalTimestampResponse> {
     let withdrawal_ready_timestamp = WITHDRAWAL_READY.load(deps.storage)?;
-    Ok(WithdrawalReadyResponse {
+    Ok(WithdrawalTimestampResponse {
         withdrawal_ready_timestamp,
+    })
+}
+
+fn query_withdraw_ready(deps: Deps, env: Env) -> StdResult<WithdrawalReadyResponse> {
+    let withdrawal_ready_timestamp = WITHDRAWAL_READY.load(deps.storage)?;
+
+    // check if we are have passed the point where withdrawal is possible
+    let is_withdrawal_ready = env.block.time > withdrawal_ready_timestamp;
+
+    Ok(WithdrawalReadyResponse {
+        is_withdrawal_ready,
     })
 }
 
