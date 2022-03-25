@@ -1,6 +1,8 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
+use cosmwasm_std::{
+    to_binary, BankMsg, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Response, StdResult,
+};
 use cw2::set_contract_version;
 
 use crate::error::ContractError;
@@ -36,14 +38,14 @@ pub fn instantiate(
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
     deps: DepsMut,
-    _env: Env,
+    env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
         ExecuteMsg::StartWithdraw {} => start_withdraw(deps, info),
         ExecuteMsg::ExecuteWithdraw {} => execute_withdraw(deps, info),
-        ExecuteMsg::ExecuteBurn {} => execute_burn(deps, info),
+        ExecuteMsg::ExecuteBurn {} => execute_burn(deps, env),
     }
 }
 
@@ -55,8 +57,23 @@ pub fn execute_withdraw(_deps: DepsMut, _info: MessageInfo) -> Result<Response, 
     Ok(Response::default())
 }
 
-pub fn execute_burn(_deps: DepsMut, _info: MessageInfo) -> Result<Response, ContractError> {
-    Ok(Response::default())
+// this is the verbose way of doing this
+// but obvious reasons for making as easy-to-read as possible
+pub fn execute_burn(deps: DepsMut, env: Env) -> Result<Response, ContractError> {
+    // this returns Vec<Coin>
+    // in this case for the contract's holdings
+    let amount = deps.querier.query_all_balances(&env.contract.address)?;
+
+    // create a burn msg struct
+    let burn_msg = BankMsg::Burn { amount };
+
+    // then msg we can add to Response
+    let msgs: Vec<CosmosMsg> = vec![burn_msg.into()];
+
+    let res = Response::new()
+        .add_attribute("action", "burn")
+        .add_messages(msgs);
+    Ok(res)
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
