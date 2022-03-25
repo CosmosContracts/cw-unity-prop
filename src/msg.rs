@@ -1,3 +1,4 @@
+use cosmwasm_std::Timestamp;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -37,5 +38,5 @@ pub enum QueryMsg {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct WithdrawalReadyResponse {
-    pub withdrawal_ready_timestamp: String,
+    pub withdrawal_ready_timestamp: Timestamp,
 }

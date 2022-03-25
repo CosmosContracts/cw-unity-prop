@@ -1,3 +1,4 @@
+use cosmwasm_std::Timestamp;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -12,5 +13,4 @@ pub struct Config {
 
 pub const CONFIG: Item<Config> = Item::new("config");
 
-// wrong type for now, needs timestamp
-pub const WITHDRAWAL_READY: Item<String> = Item::new("withdrawal_ready");
+pub const WITHDRAWAL_READY: Item<Timestamp> = Item::new("withdrawal_ready");
