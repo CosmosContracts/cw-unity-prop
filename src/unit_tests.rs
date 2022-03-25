@@ -5,6 +5,7 @@ mod tests {
         ExecuteMsg, InstantiateMsg, QueryMsg, WithdrawalReadyResponse, WithdrawalTimestampResponse,
     };
     use crate::state::Config;
+    use crate::ContractError;
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
     use cosmwasm_std::{coins, from_binary, Addr, BankMsg, CosmosMsg, Response, Timestamp};
 
@@ -137,6 +138,12 @@ mod tests {
         deps.querier
             .update_balance(&contract_addr, funds_sent_to_contract);
 
+        // random address can't call
+        let random = mock_info("some-random-guy", &[]);
+        let msg = ExecuteMsg::StartWithdraw {};
+        let err = execute(deps.as_mut(), env.clone(), random, msg).unwrap_err();
+        assert_eq!(err, ContractError::Unauthorized {});
+
         // only withdraw_address can call
         let info = mock_info(&withdraw_address, &[]);
         let msg = ExecuteMsg::StartWithdraw {};
@@ -218,6 +225,12 @@ mod tests {
             },
             is_ready
         );
+
+        // random address can't call claim
+        let random = mock_info("some-random-guy", &[]);
+        let msg = ExecuteMsg::ExecuteWithdraw {};
+        let err = execute(deps.as_mut(), env.clone(), random, msg).unwrap_err();
+        assert_eq!(err, ContractError::Unauthorized {});
 
         // LFG
         let msg = ExecuteMsg::ExecuteWithdraw {};
