@@ -7,7 +7,7 @@ use cw_storage_plus::Item;
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Config {
     pub withdraw_address: Addr,
-    pub withdraw_delay: u64,
+    pub withdraw_delay_in_days: u64,
 }
 
 pub const CONFIG: Item<Config> = Item::new("config");

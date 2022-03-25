@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InstantiateMsg {
     pub withdraw_address: String, // the address whose funds are locked in this contract
-    pub withdraw_delay: u64,      // withdraw delay in days
+    pub withdraw_delay_in_days: u64, // withdraw delay in days
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

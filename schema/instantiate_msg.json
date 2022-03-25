@@ -5,13 +5,13 @@
   "type": "object",
   "required": [
     "withdraw_address",
-    "withdraw_delay"
+    "withdraw_delay_in_days"
   ],
   "properties": {
     "withdraw_address": {
       "type": "string"
     },
-    "withdraw_delay": {
+    "withdraw_delay_in_days": {
       "type": "integer",
       "format": "uint64",
       "minimum": 0.0

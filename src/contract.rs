@@ -28,7 +28,7 @@ pub fn instantiate(
 
     let config = Config {
         withdraw_address: withdraw_address.clone(),
-        withdraw_delay: msg.withdraw_delay,
+        withdraw_delay_in_days: msg.withdraw_delay_in_days,
     };
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
     CONFIG.save(deps.storage, &config)?;
@@ -36,7 +36,7 @@ pub fn instantiate(
     Ok(Response::new()
         .add_attribute("method", "instantiate")
         .add_attribute("withdraw_address", withdraw_address)
-        .add_attribute("withdraw_delay", msg.withdraw_delay.to_string()))
+        .add_attribute("withdraw_delay", msg.withdraw_delay_in_days.to_string()))
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -59,7 +59,7 @@ pub fn start_withdraw(deps: DepsMut, env: Env) -> Result<Response, ContractError
     let config = CONFIG.load(deps.storage)?;
 
     // get number of days delay
-    let delay_in_days: u64 = config.withdraw_delay;
+    let delay_in_days: u64 = config.withdraw_delay_in_days;
 
     // do some really simple maths
     let seconds_in_day = 86400u64;
