@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
     use crate::helpers::CwTemplateContract;
-    use crate::msg::InstantiateMsg;
+    use crate::msg::{InstantiateMsg, QueryMsg, WithdrawalReadyResponse};
     use cosmwasm_std::{Addr, Coin, Empty, Uint128};
     use cw_multi_test::{App, AppBuilder, Contract, ContractWrapper, Executor};
 
@@ -34,7 +34,7 @@ mod tests {
         })
     }
 
-    fn mock_instantiate() -> (App, CwTemplateContract) {
+    fn mock_instantiate() -> (App, CwTemplateContract, Addr) {
         let mut app = mock_app();
         let cw_template_id = app.store_code(contract_template());
 
@@ -59,9 +59,16 @@ mod tests {
             )
             .unwrap();
 
-        let cw_template_contract = CwTemplateContract(cw_template_contract_addr);
+        let cw_template_contract = CwTemplateContract(cw_template_contract_addr.clone());
 
-        (app, cw_template_contract)
+        (app, cw_template_contract, cw_template_contract_addr)
+    }
+
+    fn is_withdrawal_ready(app: &mut App, contract_address: Addr) -> WithdrawalReadyResponse {
+        let msg = QueryMsg::IsWithdrawalReady {};
+        let result: WithdrawalReadyResponse =
+            app.wrap().query_wasm_smart(contract_address, &msg).unwrap();
+        result
     }
 
     mod start_withdraw {
@@ -70,7 +77,7 @@ mod tests {
 
         #[test]
         fn start_withdraw() {
-            let (mut app, cw_template_contract) = mock_instantiate();
+            let (mut app, cw_template_contract, contract_addr) = mock_instantiate();
 
             let withdraw_address = String::from("gordon-gekko-address");
             let validated_addr = Addr::unchecked(&withdraw_address);
@@ -78,11 +85,20 @@ mod tests {
             let msg = ExecuteMsg::StartWithdraw {};
             let cosmos_msg = cw_template_contract.call(msg).unwrap();
             app.execute(validated_addr, cosmos_msg).unwrap();
+
+            let withdrawal_ready = is_withdrawal_ready(&mut app, contract_addr);
+
+            assert_eq!(
+                withdrawal_ready,
+                WithdrawalReadyResponse {
+                    is_withdrawal_ready: false,
+                }
+            );
         }
 
         #[test]
         fn start_withdraw_fails_with_wrong_address() {
-            let (mut app, cw_template_contract) = mock_instantiate();
+            let (mut app, cw_template_contract, _contract_addr) = mock_instantiate();
 
             let msg = ExecuteMsg::StartWithdraw {};
             let cosmos_msg = cw_template_contract.call(msg).unwrap();
