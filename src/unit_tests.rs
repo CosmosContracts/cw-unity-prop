@@ -158,6 +158,89 @@ mod tests {
     }
 
     #[test]
+    fn sudo_send_sending_too_much_fails() {
+        let mut deps = mock_dependencies();
+        let mut env = mock_env();
+
+        env.block.time = Timestamp::from_seconds(0);
+
+        let funds_sent_to_contract = coins(3_000_000, NATIVE_DENOM);
+
+        let withdraw_address = String::from("gordon-gekko-address"); // in reality this would be e.g. juno16g2rahf5846rxzp3fwlswy08fz8ccuwk03k57y
+        let _validated_addr = Addr::unchecked(&withdraw_address);
+        let withdraw_delay_in_days = 28; // this is what we are expecting to set it to
+
+        // look I get that this is an increasingly niche joke
+        let community_nominated_address = String::from("carl-fox-address");
+
+        let msg = InstantiateMsg {
+            withdraw_address,
+            withdraw_delay_in_days,
+            native_denom: NATIVE_DENOM.to_string(),
+        };
+
+        // the person instantiating
+        let instantiate_info = mock_info("bud-fox-address", &funds_sent_to_contract);
+
+        // assert this was a success
+        let res = instantiate(deps.as_mut(), env.clone(), instantiate_info, msg).unwrap();
+        assert_eq!(0, res.messages.len());
+
+        // mock funds being added to contract
+        let contract_addr = env.clone().contract.address;
+        deps.querier
+            .update_balance(&contract_addr, funds_sent_to_contract);
+
+        // attempt to send more than the contract holds
+        // this will blow up
+        let msg = SudoMsg::ExecuteSend {
+            recipient: community_nominated_address,
+            amount: Uint128::new(5_000_000), // spell it out explicitly
+        };
+        let err = sudo(deps.as_mut(), env, msg).unwrap_err();
+
+        assert_eq!(err, ContractError::InsufficientContractBalance {});
+    }
+
+    #[test]
+    fn sudo_send_no_native_balance_fails() {
+        let mut deps = mock_dependencies();
+        let mut env = mock_env();
+
+        env.block.time = Timestamp::from_seconds(0);
+
+        let withdraw_address = String::from("gordon-gekko-address"); // in reality this would be e.g. juno16g2rahf5846rxzp3fwlswy08fz8ccuwk03k57y
+        let _validated_addr = Addr::unchecked(&withdraw_address);
+        let withdraw_delay_in_days = 28; // this is what we are expecting to set it to
+
+        // look I get that this is an increasingly niche joke
+        let community_nominated_address = String::from("carl-fox-address");
+
+        let msg = InstantiateMsg {
+            withdraw_address,
+            withdraw_delay_in_days,
+            native_denom: NATIVE_DENOM.to_string(),
+        };
+
+        // the person instantiating
+        let instantiate_info = mock_info("bud-fox-address", &[]);
+
+        // assert this was a success
+        let res = instantiate(deps.as_mut(), env.clone(), instantiate_info, msg).unwrap();
+        assert_eq!(0, res.messages.len());
+
+        // note at this point we send no funds to the contract
+        // so the contract has no native balance
+        let msg = SudoMsg::ExecuteSend {
+            recipient: community_nominated_address,
+            amount: Uint128::new(5_000_000), // spell it out explicitly
+        };
+        let err = sudo(deps.as_mut(), env, msg).unwrap_err();
+
+        assert_eq!(err, ContractError::NoNativeBalance {});
+    }
+
+    #[test]
     fn start_withdraw() {
         let mut deps = mock_dependencies();
         let mut env = mock_env();

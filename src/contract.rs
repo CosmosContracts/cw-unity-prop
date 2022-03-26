@@ -171,7 +171,7 @@ pub fn execute_burn(deps: DepsMut, env: Env) -> Result<Response, ContractError> 
 // allows the community to send funds somewhere
 pub fn execute_send(
     deps: DepsMut,
-    _env: Env,
+    env: Env,
     recipient: String,
     amount: Uint128,
 ) -> Result<Response, ContractError> {
@@ -180,6 +180,26 @@ pub fn execute_send(
 
     // get native denom
     let native_denom = config.native_denom;
+
+    // get contract balance
+    let contract_balances: Vec<Coin> = deps.querier.query_all_balances(&env.contract.address)?;
+
+    // we are going to check the contract has enough to execute the send
+    // now it should error if not,
+    // but we handle it here just in case
+    let native_balance = contract_balances
+        .iter()
+        .find(|&coin| coin.denom == native_denom);
+
+    // should never be no native balance, but handle it
+    // as well as insufficient funds case
+    if let Some(nb) = native_balance {
+        if nb.amount < amount {
+            return Err(ContractError::InsufficientContractBalance {});
+        }
+    } else {
+        return Err(ContractError::NoNativeBalance {});
+    }
 
     // validate supplied address
     let validated_address = deps.api.addr_validate(&recipient)?;
