@@ -11,7 +11,8 @@ mod tests {
             crate::contract::instantiate,
             crate::contract::query,
         );
-        Box::new(contract)
+        let contract_with_sudo = contract.with_sudo(crate::contract::sudo);
+        Box::new(contract_with_sudo)
     }
 
     const USER: &str = "USER";
