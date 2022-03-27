@@ -143,6 +143,7 @@ pub fn sudo(deps: DepsMut, env: Env, msg: SudoMsg) -> Result<Response, ContractE
     match msg {
         SudoMsg::ExecuteBurn {} => execute_burn(deps, env),
         SudoMsg::ExecuteSend { recipient, amount } => execute_send(deps, env, recipient, amount),
+        SudoMsg::ExecuteSendAll { recipient } => execute_send_all(deps, env, recipient),
     }
 }
 
@@ -219,6 +220,52 @@ pub fn execute_send(
     let res = Response::new()
         .add_attribute("message_type", "sudo")
         .add_attribute("action", "send")
+        .add_messages(msgs);
+    Ok(res)
+}
+
+// a mashup of the above two handlers, really
+pub fn execute_send_all(
+    deps: DepsMut,
+    env: Env,
+    recipient: String,
+) -> Result<Response, ContractError> {
+    // get config
+    let config = CONFIG.load(deps.storage)?;
+
+    // get native denom
+    let native_denom = config.native_denom;
+
+    // get contract balance
+    let contract_balances: Vec<Coin> = deps.querier.query_all_balances(&env.contract.address)?;
+
+    // get native balance
+    let native_balance = contract_balances
+        .iter()
+        .find(|&coin| coin.denom == native_denom);
+
+    // handle no native balance
+    if native_balance.is_none() {
+        return Err(ContractError::NoNativeBalance {});
+    }
+
+    // validate supplied address
+    let validated_address = deps.api.addr_validate(&recipient)?;
+
+    // create a send
+    // note that this sends all balances
+    // not just native
+    let send_msg = BankMsg::Send {
+        to_address: validated_address.to_string(),
+        amount: contract_balances,
+    };
+
+    // marshall message
+    let msgs: Vec<CosmosMsg> = vec![send_msg.into()];
+
+    let res = Response::new()
+        .add_attribute("message_type", "sudo")
+        .add_attribute("action", "send_all")
         .add_messages(msgs);
     Ok(res)
 }

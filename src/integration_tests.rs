@@ -159,6 +159,15 @@ mod tests {
         app.wasm_sudo(contract_address, &msg)
     }
 
+    fn exec_sudo_send_all(
+        app: &mut App,
+        contract_address: Addr,
+        recipient: String,
+    ) -> anyhow::Result<AppResponse> {
+        let msg = SudoMsg::ExecuteSendAll { recipient };
+        app.wasm_sudo(contract_address, &msg)
+    }
+
     fn get_balance(app: &mut App, address: &Addr) -> Vec<Coin> {
         app.wrap().query_all_balances(address).unwrap()
     }
@@ -175,6 +184,7 @@ mod tests {
 
             let contract_balance = get_balance(&mut app, &contract_addr);
 
+            // balance now empty
             assert_eq!(contract_balance, &[]);
         }
 
@@ -203,7 +213,7 @@ mod tests {
 
             let contract_balance = get_balance(&mut app, &contract_addr);
 
-            assert_eq!(contract_balance, coins(1_000_000, NATIVE_DENOM),);
+            assert_eq!(contract_balance, coins(1_000_000, NATIVE_DENOM));
         }
 
         #[test]
@@ -221,6 +231,42 @@ mod tests {
                 Uint128::new(2_000_000),
             )
             .unwrap_err();
+        }
+
+        #[test]
+        fn sudo_send_all() {
+            let (mut app, _cw_template_contract, contract_addr) = mock_instantiate();
+
+            let nominated_address = String::from("carl-fox-address");
+            let validated_addr = Addr::unchecked(&nominated_address);
+
+            // this tests for success
+            exec_sudo_send_all(&mut app, contract_addr.clone(), validated_addr.to_string())
+                .unwrap();
+
+            let community_nominated_address_balance = get_balance(&mut app, &validated_addr);
+
+            assert_eq!(
+                community_nominated_address_balance,
+                coins(3_000_000, NATIVE_DENOM),
+            );
+
+            let contract_balance = get_balance(&mut app, &contract_addr);
+
+            // contract balance now empty
+            assert_eq!(contract_balance, &[]);
+        }
+
+        #[test]
+        fn sudo_send_all_fails() {
+            let (mut app, _cw_template_contract, contract_addr) = mock_instantiate_no_balance();
+
+            let nominated_address = String::from("carl-fox-address");
+            let validated_addr = Addr::unchecked(&nominated_address);
+
+            // this tests for error
+            let _err = exec_sudo_send_all(&mut app, contract_addr, validated_addr.to_string())
+                .unwrap_err();
         }
 
         #[test]

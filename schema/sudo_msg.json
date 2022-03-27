@@ -40,6 +40,27 @@
         }
       },
       "additionalProperties": false
+    },
+    {
+      "description": "Sends all funds held by the contract to a nominated address",
+      "type": "object",
+      "required": [
+        "execute_send_all"
+      ],
+      "properties": {
+        "execute_send_all": {
+          "type": "object",
+          "required": [
+            "recipient"
+          ],
+          "properties": {
+            "recipient": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "additionalProperties": false
     }
   ],
   "definitions": {

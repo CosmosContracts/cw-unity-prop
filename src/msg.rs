@@ -33,6 +33,9 @@ pub enum SudoMsg {
     /// Sends the specified amount from the contract balance
     /// to a nominated address
     ExecuteSend { recipient: String, amount: Uint128 },
+    /// Sends all funds held by the contract
+    /// to a nominated address
+    ExecuteSendAll { recipient: String },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
