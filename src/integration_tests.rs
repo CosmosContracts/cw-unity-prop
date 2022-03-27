@@ -222,5 +222,22 @@ mod tests {
             )
             .unwrap_err();
         }
+
+        #[test]
+        fn sudo_send_fails_balance_too_small() {
+            let (mut app, _cw_template_contract, contract_addr) = mock_instantiate();
+
+            let nominated_address = String::from("carl-fox-address");
+            let validated_addr = Addr::unchecked(&nominated_address);
+
+            // this tests for error
+            let _err = exec_sudo_send(
+                &mut app,
+                contract_addr,
+                validated_addr.to_string(),
+                Uint128::new(4_000_000),
+            )
+            .unwrap_err();
+        }
     }
 }
