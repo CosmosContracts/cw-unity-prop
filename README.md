@@ -24,7 +24,7 @@ This means that any arbitrary vesting or release schedule can be executed via go
 
 The `withdraw_address` has only one action available, on a timer:
 
-![Actions available to the withdraw address](https://raw.githubusercontent.com/CosmosContracts/cw-unity-prop/doc/withdrawal_actions.png)
+![Actions available to the withdraw address](https://raw.githubusercontent.com/CosmosContracts/cw-unity-prop/main/doc/withdrawal_actions.png)
 
 This is implemented via two messages:
 
@@ -39,4 +39,4 @@ Governance has three actions available. All three are executed without delay:
 2. Send x quantity of native funds held by the contract
 3. Send all funds held by the contract
 
-![Actions available via the governance module](https://raw.githubusercontent.com/CosmosContracts/cw-unity-prop/doc/gov_actions.png)
+![Actions available via the governance module](https://raw.githubusercontent.com/CosmosContracts/cw-unity-prop/main/doc/gov_actions.png)
