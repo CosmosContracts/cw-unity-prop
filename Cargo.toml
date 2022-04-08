@@ -1,6 +1,6 @@
 [package]
 name = "cw-unity-prop"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Alex Lynham <alex@lynh.am>"]
 edition = "2018"
 
