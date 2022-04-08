@@ -39,7 +39,7 @@ docker run --rm -v "$(pwd)":/code \
   cosmwasm/rust-optimizer:0.12.5
 
 # copy wasm to docker container
-docker cp artifacts/cw-unity-prop.wasm $CONTAINER_NAME:/cw-unity-prop.wasm
+docker cp artifacts/cw_unity_prop.wasm $CONTAINER_NAME:/cw_unity_prop.wasm
 
 # validator addr
 VALIDATOR_ADDR=$($BINARY keys show validator --address)
@@ -57,7 +57,7 @@ echo "TX Flags: $TXFLAG"
 set -e
 
 # upload wasm
-CONTRACT_CODE=$($BINARY tx wasm store "/cw-unity-prop.wasm" --from validator $TXFLAG --output json | jq -r '.logs[0].events[-1].attributes[0].value')
+CONTRACT_CODE=$($BINARY tx wasm store "/cw_unity_prop.wasm" --from validator $TXFLAG --output json | jq -r '.logs[0].events[-1].attributes[0].value')
 echo "Stored: $CONTRACT_CODE"
 
 BALANCE_2=$($BINARY q bank balances $VALIDATOR_ADDR)
