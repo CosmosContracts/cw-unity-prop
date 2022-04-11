@@ -6,7 +6,7 @@ A CosmWasm Smart Contract to implement the Juno Unity Prop.
 
 Develop features and write unit tests.
 
-Before committing, run `./check.sh`.
+Before committing, run `./scripts/check.sh`.
 
 ## Structure
 
