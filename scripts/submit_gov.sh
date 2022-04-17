@@ -75,20 +75,21 @@ INIT='{
 echo "$INIT" | jq .
 
 # --no-admin sent in test
-$BINARY tx wasm instantiate $CONTRACT_CODE "$INIT" --from "validator" --label "juno unity prop" $TXFLAG --no-admin 
+$BINARY tx wasm instantiate $CONTRACT_CODE "$INIT" --from validator --label "juno unity prop" $TXFLAG --no-admin 
 RES=$?
 
 # get contract addr
 CONTRACT_ADDRESS=$($BINARY q wasm list-contract-by-code $CONTRACT_CODE --output json | jq -r '.contracts[-1]')
 
-# attempt to trigger withdrawal
-START_WITHDRAW='{
-  "start_withdraw": {}
-}'
-$BINARY tx wasm execute "$CONTRACT_ADDRESS" "$START_WITHDRAW" --from test-user $TXFLAG
+# send contract funds
+$BINARY tx bank send juno16g2rahf5846rxzp3fwlswy08fz8ccuwk03k57y $CONTRACT_ADDRESS 2000000ujunox $TXFLAG
 
-READY_TIME=$($BINARY q wasm contract-state smart $CONTRACT_ADDRESS '{"get_withdrawal_ready_time": {}}' --output json)
-echo $READY_TIME | jq .
+$BINARY tx gov submit-proposal sudo-contract $CONTRACT_ADDRESS '{"execute_send": {"amount": "1000000", "recipient": "juno16g2rahf5846rxzp3fwlswy08fz8ccuwk03k57y"}}' \
+  --from test-user $TXFLAG \
+  --title "Prop title" \
+  --description "LFG" \
+  --type sudo-contract \
+  --deposit 500000000ujunox
 
 # Print out config variables
 printf "\n ------------------------ \n"
