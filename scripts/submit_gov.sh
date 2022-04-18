@@ -6,7 +6,7 @@ then
   exit
 fi
 
-IMAGE_TAG=${2:-"v3.1.0"}
+IMAGE_TAG=${2:-"v3.2.0-alpha"}
 CONTAINER_NAME="juno_cw_unity_prop"
 BINARY="docker exec -i $CONTAINER_NAME junod"
 DENOM='ujunox'
