@@ -91,6 +91,8 @@ $BINARY tx gov submit-proposal sudo-contract $CONTRACT_ADDRESS '{"execute_send":
   --type sudo-contract \
   --deposit 500000000ujunox
 
+$BINARY q gov proposal 1
+
 # Print out config variables
 printf "\n ------------------------ \n"
 printf "Contract Variables \n\n"
