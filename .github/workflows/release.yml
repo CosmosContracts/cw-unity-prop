@@ -25,3 +25,12 @@ jobs:
           asset_path: ./artifacts/cw_unity_prop.wasm
           asset_name: cw_unity_prop.wasm
           asset_content_type: application/octet-stream
+      - name: Upload checksums
+        uses: actions/upload-release-asset@v1.0.2
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          upload_url: ${{ steps.get_release.outputs.upload_url }}
+          asset_path: ./artifacts/checksums.txt
+          asset_name: checksums.txt
+          asset_content_type: text/plain
