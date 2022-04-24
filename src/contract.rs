@@ -2,7 +2,7 @@
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
     coins, ensure_eq, to_binary, BankMsg, Binary, Coin, CosmosMsg, Deps, DepsMut, Env, MessageInfo,
-    Response, StdResult, Timestamp, Uint128,
+    Response, StdError, StdResult, Timestamp, Uint128,
 };
 use cw2::set_contract_version;
 
@@ -285,19 +285,31 @@ fn query_config(deps: Deps) -> StdResult<Config> {
 }
 
 fn get_withdraw_ready(deps: Deps) -> StdResult<WithdrawalTimestampResponse> {
-    let withdrawal_ready_timestamp = WITHDRAWAL_READY.load(deps.storage)?;
-    Ok(WithdrawalTimestampResponse {
-        withdrawal_ready_timestamp,
-    })
+    let withdrawal_ready_timestamp = WITHDRAWAL_READY.may_load(deps.storage)?;
+    match withdrawal_ready_timestamp {
+        Some(wrt) => Ok(WithdrawalTimestampResponse {
+            withdrawal_ready_timestamp: wrt,
+        }),
+        None => Err(StdError::not_found(
+            "Withdrawal not yet requested - no Withdrawal time exists",
+        )),
+    }
 }
 
 fn query_withdraw_ready(deps: Deps, env: Env) -> StdResult<WithdrawalReadyResponse> {
-    let withdrawal_ready_timestamp = WITHDRAWAL_READY.load(deps.storage)?;
+    let withdrawal_ready_timestamp = WITHDRAWAL_READY.may_load(deps.storage)?;
 
-    // check if we are have passed the point where withdrawal is possible
-    let is_withdrawal_ready = env.block.time > withdrawal_ready_timestamp;
+    match withdrawal_ready_timestamp {
+        Some(wrt) => {
+            // check if we are have passed the point where withdrawal is possible
+            let is_withdrawal_ready = env.block.time > wrt;
 
-    Ok(WithdrawalReadyResponse {
-        is_withdrawal_ready,
-    })
+            Ok(WithdrawalReadyResponse {
+                is_withdrawal_ready,
+            })
+        }
+        None => Err(StdError::not_found(
+            "Withdrawal not yet requested - no Withdrawal time exists",
+        )),
+    }
 }

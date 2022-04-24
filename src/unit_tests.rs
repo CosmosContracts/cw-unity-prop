@@ -9,7 +9,7 @@ mod tests {
     use crate::ContractError;
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
     use cosmwasm_std::{
-        coins, from_binary, Addr, BankMsg, CosmosMsg, Response, Timestamp, Uint128,
+        coins, from_binary, Addr, BankMsg, CosmosMsg, Response, StdError, Timestamp, Uint128,
     };
 
     const NATIVE_DENOM: &str = "ujuno";
@@ -295,6 +295,62 @@ mod tests {
         let err = sudo(deps.as_mut(), env, msg).unwrap_err();
 
         assert_eq!(err, ContractError::NoNativeBalance {});
+    }
+
+    #[test]
+    fn withdraw_query_error_cases() {
+        let mut deps = mock_dependencies();
+        let mut env = mock_env();
+
+        env.block.time = Timestamp::from_seconds(0);
+
+        let funds_sent_to_contract = coins(1_000_000, NATIVE_DENOM);
+
+        let withdraw_address = String::from("gordon-gekko-address"); // in reality this would be e.g. juno16g2rahf5846rxzp3fwlswy08fz8ccuwk03k57y
+        let _validated_addr = Addr::unchecked(&withdraw_address);
+        let withdraw_delay_in_days = 28; // this is what we are expecting to set it to
+
+        let msg = InstantiateMsg {
+            withdraw_address,
+            withdraw_delay_in_days,
+            native_denom: NATIVE_DENOM.to_string(),
+        };
+
+        // the person instantiating
+        let instantiate_info = mock_info("bud-fox-address", &funds_sent_to_contract);
+
+        // call .unwrap() to assert this was a success
+        let res = instantiate(deps.as_mut(), env.clone(), instantiate_info, msg).unwrap();
+        assert_eq!(0, res.messages.len());
+
+        // mock funds being added to contract
+        let contract_addr = env.clone().contract.address;
+        deps.querier
+            .update_balance(&contract_addr, funds_sent_to_contract);
+
+        // timestamp check should return err
+        let sense_check = query(
+            deps.as_ref(),
+            env.clone(),
+            QueryMsg::GetWithdrawalReadyTime {},
+        )
+        .unwrap_err();
+        assert_eq!(
+            StdError::NotFound {
+                kind: "Withdrawal not yet requested - no Withdrawal time exists".to_string()
+            },
+            sense_check
+        );
+
+        // withdraw should return err
+        // is the withdrawal ready?
+        let sense_check = query(deps.as_ref(), env, QueryMsg::IsWithdrawalReady {}).unwrap_err();
+        assert_eq!(
+            StdError::NotFound {
+                kind: "Withdrawal not yet requested - no Withdrawal time exists".to_string()
+            },
+            sense_check
+        );
     }
 
     #[test]
