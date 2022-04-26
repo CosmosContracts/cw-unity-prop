@@ -36,13 +36,13 @@ mod tests {
         })
     }
 
-    fn mock_instantiate() -> (App, CwTemplateContract, Addr) {
+    fn mock_instantiate(days: u64) -> (App, CwTemplateContract, Addr) {
         let mut app = mock_app();
         let cw_template_id = app.store_code(contract_template());
 
         let withdraw_address = String::from("gordon-gekko-address"); // in reality this would be e.g. juno16g2rahf5846rxzp3fwlswy08fz8ccuwk03k57y
         let _validated_addr = Addr::unchecked(&withdraw_address);
-        let withdraw_delay_in_days = 28; // this is what we are expecting to set it to
+        let withdraw_delay_in_days = days; // this is what we are expecting to set it to
 
         let msg = InstantiateMsg {
             withdraw_address,
@@ -111,7 +111,7 @@ mod tests {
 
         #[test]
         fn start_withdraw() {
-            let (mut app, cw_template_contract, contract_addr) = mock_instantiate();
+            let (mut app, cw_template_contract, contract_addr) = mock_instantiate(28);
 
             let withdraw_address = String::from("gordon-gekko-address");
             let validated_addr = Addr::unchecked(&withdraw_address);
@@ -131,8 +131,81 @@ mod tests {
         }
 
         #[test]
+        fn start_withdraw_then_sudo_burn() {
+            let (mut app, cw_template_contract, contract_addr) = mock_instantiate(28);
+
+            let withdraw_address = String::from("gordon-gekko-address");
+            let validated_addr = Addr::unchecked(&withdraw_address);
+
+            let msg = ExecuteMsg::StartWithdraw {};
+            let cosmos_msg = cw_template_contract.call(msg).unwrap();
+            app.execute(validated_addr, cosmos_msg).unwrap();
+
+            let withdrawal_ready = is_withdrawal_ready(&mut app, contract_addr.clone());
+
+            assert_eq!(
+                withdrawal_ready,
+                WithdrawalReadyResponse {
+                    is_withdrawal_ready: false,
+                }
+            );
+
+            // community decides to burn
+            exec_sudo_burn(&mut app, contract_addr.clone()).unwrap();
+
+            let contract_balance = get_balance(&mut app, &contract_addr);
+
+            // balance should now be empty
+            assert_eq!(contract_balance, &[]);
+        }
+
+        #[test]
+        fn start_withdraw_then_sudo_send() {
+            let (mut app, cw_template_contract, contract_addr) = mock_instantiate(28);
+
+            let withdraw_address = String::from("gordon-gekko-address");
+            let validated_addr = Addr::unchecked(&withdraw_address);
+
+            let msg = ExecuteMsg::StartWithdraw {};
+            let cosmos_msg = cw_template_contract.call(msg).unwrap();
+            app.execute(validated_addr, cosmos_msg).unwrap();
+
+            let withdrawal_ready = is_withdrawal_ready(&mut app, contract_addr.clone());
+
+            assert_eq!(
+                withdrawal_ready,
+                WithdrawalReadyResponse {
+                    is_withdrawal_ready: false,
+                }
+            );
+
+            let nominated_address = String::from("carl-fox-address");
+            let validated_addr = Addr::unchecked(&nominated_address);
+
+            // now attempt to send funds
+            exec_sudo_send(
+                &mut app,
+                contract_addr.clone(),
+                validated_addr.to_string(),
+                Uint128::new(2_500_000),
+            )
+            .unwrap();
+
+            let community_nominated_address_balance = get_balance(&mut app, &validated_addr);
+
+            assert_eq!(
+                community_nominated_address_balance,
+                coins(2_500_000, NATIVE_DENOM),
+            );
+
+            let contract_balance = get_balance(&mut app, &contract_addr);
+
+            assert_eq!(contract_balance, coins(500_000, NATIVE_DENOM));
+        }
+
+        #[test]
         fn start_withdraw_fails_with_wrong_address() {
-            let (mut app, cw_template_contract, _contract_addr) = mock_instantiate();
+            let (mut app, cw_template_contract, _contract_addr) = mock_instantiate(28);
 
             let msg = ExecuteMsg::StartWithdraw {};
             let cosmos_msg = cw_template_contract.call(msg).unwrap();
@@ -177,7 +250,7 @@ mod tests {
 
         #[test]
         fn sudo_burn() {
-            let (mut app, _cw_template_contract, contract_addr) = mock_instantiate();
+            let (mut app, _cw_template_contract, contract_addr) = mock_instantiate(28);
 
             // this tests for success
             exec_sudo_burn(&mut app, contract_addr.clone()).unwrap();
@@ -190,7 +263,7 @@ mod tests {
 
         #[test]
         fn sudo_send() {
-            let (mut app, _cw_template_contract, contract_addr) = mock_instantiate();
+            let (mut app, _cw_template_contract, contract_addr) = mock_instantiate(28);
 
             let nominated_address = String::from("carl-fox-address");
             let validated_addr = Addr::unchecked(&nominated_address);
@@ -235,7 +308,7 @@ mod tests {
 
         #[test]
         fn sudo_send_all() {
-            let (mut app, _cw_template_contract, contract_addr) = mock_instantiate();
+            let (mut app, _cw_template_contract, contract_addr) = mock_instantiate(28);
 
             let nominated_address = String::from("carl-fox-address");
             let validated_addr = Addr::unchecked(&nominated_address);
@@ -271,7 +344,7 @@ mod tests {
 
         #[test]
         fn sudo_send_fails_balance_too_small() {
-            let (mut app, _cw_template_contract, contract_addr) = mock_instantiate();
+            let (mut app, _cw_template_contract, contract_addr) = mock_instantiate(28);
 
             let nominated_address = String::from("carl-fox-address");
             let validated_addr = Addr::unchecked(&nominated_address);
