@@ -3,7 +3,7 @@ mod tests {
     use crate::helpers::CwTemplateContract;
     use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg, SudoMsg, WithdrawalReadyResponse};
 
-    use cosmwasm_std::{coins, Addr, Coin, Empty, Uint128};
+    use cosmwasm_std::{coins, Addr, BlockInfo, Coin, Empty, Uint128};
     use cw_multi_test::{App, AppBuilder, AppResponse, Contract, ContractWrapper, Executor};
 
     pub fn contract_template() -> Box<dyn Contract<Empty>> {
@@ -99,6 +99,14 @@ mod tests {
         (app, cw_template_contract, cw_template_contract_addr)
     }
 
+    fn advance_one_day_one_hour(block: &mut BlockInfo) {
+        let one_day_one_hour_in_seconds = 90_000;
+        block.time = block.time.plus_seconds(one_day_one_hour_in_seconds);
+        // av of 1 per 5s
+        let blocks_to_advance = one_day_one_hour_in_seconds / 5;
+        block.height += blocks_to_advance;
+    }
+
     fn is_withdrawal_ready(app: &mut App, contract_address: Addr) -> WithdrawalReadyResponse {
         let msg = QueryMsg::IsWithdrawalReady {};
         let result: WithdrawalReadyResponse =
@@ -131,6 +139,53 @@ mod tests {
         }
 
         #[test]
+        fn start_withdraw_then_claim() {
+            let (mut app, cw_template_contract, contract_addr) = mock_instantiate(1);
+
+            let withdraw_address = String::from("gordon-gekko-address");
+            let validated_addr = Addr::unchecked(&withdraw_address);
+
+            let msg = ExecuteMsg::StartWithdraw {};
+            let cosmos_msg = cw_template_contract.call(msg).unwrap();
+            app.execute(validated_addr.clone(), cosmos_msg).unwrap();
+
+            let withdrawal_ready = is_withdrawal_ready(&mut app, contract_addr.clone());
+
+            assert_eq!(
+                withdrawal_ready,
+                WithdrawalReadyResponse {
+                    is_withdrawal_ready: false,
+                }
+            );
+
+            // move time forward
+            app.update_block(advance_one_day_one_hour);
+
+            // should be ready
+            let withdrawal_ready_try_two = is_withdrawal_ready(&mut app, contract_addr.clone());
+
+            assert_eq!(
+                withdrawal_ready_try_two,
+                WithdrawalReadyResponse {
+                    is_withdrawal_ready: true,
+                }
+            );
+
+            //now claim
+            let claim_msg = ExecuteMsg::ExecuteWithdraw {};
+            let claim_msg_res = cw_template_contract.call(claim_msg).unwrap();
+            app.execute(validated_addr.clone(), claim_msg_res).unwrap();
+
+            // contract balance should be zero
+            let contract_balance = get_balance(&mut app, &contract_addr);
+            assert_eq!(contract_balance, &[]);
+
+            // withdrawer should have balance
+            let withdrawer_balance = get_balance(&mut app, &validated_addr);
+            assert_eq!(withdrawer_balance, coins(3_000_000, NATIVE_DENOM));
+        }
+
+        #[test]
         fn start_withdraw_then_sudo_burn() {
             let (mut app, cw_template_contract, contract_addr) = mock_instantiate(28);
 
@@ -157,6 +212,54 @@ mod tests {
 
             // balance should now be empty
             assert_eq!(contract_balance, &[]);
+        }
+
+        #[test]
+        fn start_withdraw_then_sudo_burn_then_claim() {
+            let (mut app, cw_template_contract, contract_addr) = mock_instantiate(1);
+
+            let withdraw_address = String::from("gordon-gekko-address");
+            let validated_addr = Addr::unchecked(&withdraw_address);
+
+            let msg = ExecuteMsg::StartWithdraw {};
+            let cosmos_msg = cw_template_contract.call(msg).unwrap();
+            app.execute(validated_addr.clone(), cosmos_msg).unwrap();
+
+            let withdrawal_ready = is_withdrawal_ready(&mut app, contract_addr.clone());
+
+            assert_eq!(
+                withdrawal_ready,
+                WithdrawalReadyResponse {
+                    is_withdrawal_ready: false,
+                }
+            );
+
+            // move time forward
+            app.update_block(advance_one_day_one_hour);
+
+            // should be ready
+            let withdrawal_ready_try_two = is_withdrawal_ready(&mut app, contract_addr.clone());
+
+            assert_eq!(
+                withdrawal_ready_try_two,
+                WithdrawalReadyResponse {
+                    is_withdrawal_ready: true,
+                }
+            );
+
+            // community decides to burn
+            exec_sudo_burn(&mut app, contract_addr.clone()).unwrap();
+
+            let contract_balance = get_balance(&mut app, &contract_addr);
+
+            // balance should now be zero
+            assert_eq!(contract_balance, &[]);
+
+            //now claim
+            // this will error
+            let claim_msg = ExecuteMsg::ExecuteWithdraw {};
+            let claim_msg_res = cw_template_contract.call(claim_msg).unwrap();
+            app.execute(validated_addr, claim_msg_res).unwrap_err();
         }
 
         #[test]
