@@ -186,6 +186,18 @@ mod tests {
         }
 
         #[test]
+        fn start_claim_no_withdraw() {
+            let (mut app, cw_template_contract, _) = mock_instantiate(1);
+
+            let withdraw_address = String::from("gordon-gekko-address");
+            let validated_addr = Addr::unchecked(&withdraw_address);
+
+            let claim_msg = ExecuteMsg::ExecuteWithdraw {};
+            let claim_msg_res = cw_template_contract.call(claim_msg).unwrap();
+            app.execute(validated_addr, claim_msg_res).unwrap_err();
+        }
+
+        #[test]
         fn start_withdraw_then_sudo_burn() {
             let (mut app, cw_template_contract, contract_addr) = mock_instantiate(28);
 
