@@ -1,6 +1,8 @@
 # cw-unity-prop
 
-A CosmWasm Smart Contract to implement the Juno Unity Prop. For information on verifying the on-chain smart contract see [VERIFYING.md](./VERIFYING.md).
+A CosmWasm Smart Contract to implement the Juno Unity Prop.
+
+For information on verifying the on-chain smart contract, see [VERIFYING.md](./VERIFYING.md).
 
 ## Developing
 
