@@ -16,10 +16,6 @@ BLOCK_GAS_LIMIT=${GAS_LIMIT:-100000000} # mirrors mainnet
 
 echo "Configured Block Gas Limit: $BLOCK_GAS_LIMIT"
 
-# orphans
-docker kill $CONTAINER_NAME
-docker volume rm -f junod_data
-
 # compile
 docker run --rm -v "$(pwd)":/code \
   --mount type=volume,source="$(basename "$(pwd)")_cache",target=/code/target \
