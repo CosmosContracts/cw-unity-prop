@@ -12,7 +12,7 @@ DENOM='ujunox'
 CHAIN_ID='testing'
 RPC='http://localhost:26657/'
 TXFLAG="--gas-prices 0.1$DENOM --gas auto --gas-adjustment 1.3 -y -b block --chain-id $CHAIN_ID --node $RPC"
-BLOCK_GAS_LIMIT=${GAS_LIMIT:-100000000} # mirrors mainnet
+BLOCK_GAS_LIMIT=${GAS_LIMIT:-10000000} # mirrors mainnet
 
 echo "Configured Block Gas Limit: $BLOCK_GAS_LIMIT"
 
@@ -73,7 +73,6 @@ $BINARY tx gov submit-proposal sudo-contract $CONTRACT_ADDRESS '{"execute_send":
   --from test-user $TXFLAG \
   --title "Prop title" \
   --description "LFG" \
-  --type sudo-contract \
   --deposit 500000000ujunox
 
 $BINARY q gov proposal 1
