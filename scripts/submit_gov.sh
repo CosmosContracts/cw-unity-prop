@@ -88,7 +88,6 @@ $BINARY tx gov submit-proposal sudo-contract $CONTRACT_ADDRESS '{"execute_send":
   --from test-user $TXFLAG \
   --title "Prop title" \
   --description "LFG" \
-  --type sudo-contract \
   --deposit 500000000ujunox
 
 $BINARY q gov proposal 1
