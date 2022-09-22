@@ -6,7 +6,7 @@ then
   exit
 fi
 
-IMAGE_TAG=${2:-"v9.0.0"}
+IMAGE_TAG=${2:-"wasmd_029_rc1"}
 CONTAINER_NAME="juno_cw_unity_prop"
 BINARY="docker exec -i $CONTAINER_NAME junod"
 DENOM='ujunox'
@@ -56,7 +56,7 @@ echo "TX Flags: $TXFLAG"
 set -e
 
 # upload wasm
-CONTRACT_CODE=$($BINARY tx wasm store "/cw_unity_prop.wasm" --from validator $TXFLAG --output json | jq -r '.logs[0].events[-1].attributes[0].value')
+CONTRACT_CODE=$($BINARY tx wasm store "/cw_unity_prop.wasm" --from validator $TXFLAG --output json | jq -r '.logs[0].events[-1].attributes[-1].value')
 echo "Stored: $CONTRACT_CODE"
 
 BALANCE_2=$($BINARY q bank balances $VALIDATOR_ADDR)

@@ -6,14 +6,14 @@ then
   exit
 fi
 
-IMAGE_TAG=${2:-"v9.0.0"}
+IMAGE_TAG=${2:-"wasmd_029_rc1"}
 CONTAINER_NAME="juno_cw_unity_prop"
 BINARY="docker exec -i $CONTAINER_NAME junod"
 DENOM='ujunox'
 CHAIN_ID='testing'
 RPC='http://localhost:26657/'
 TXFLAG="--gas-prices 0.1$DENOM --gas auto --gas-adjustment 1.3 -y -b block --chain-id $CHAIN_ID --node $RPC"
-BLOCK_GAS_LIMIT=${GAS_LIMIT:-100000000} # mirrors mainnet
+BLOCK_GAS_LIMIT=${GAS_LIMIT:-10000000} # mirrors mainnet
 
 echo "Building $IMAGE_TAG"
 echo "Configured Block Gas Limit: $BLOCK_GAS_LIMIT"
@@ -35,7 +35,7 @@ docker run --rm -d --name $CONTAINER_NAME \
 docker run --rm -v "$(pwd)":/code \
   --mount type=volume,source="$(basename "$(pwd)")_cache",target=/code/target \
   --mount type=volume,source=registry_cache,target=/usr/local/cargo/registry \
-  cosmwasm/rust-optimizer:0.12.6
+  cosmwasm/rust-optimizer:0.12.8
 
 # copy wasm to docker container
 docker cp artifacts/cw_unity_prop.wasm $CONTAINER_NAME:/cw_unity_prop.wasm
@@ -56,7 +56,7 @@ echo "TX Flags: $TXFLAG"
 set -e
 
 # upload wasm
-CONTRACT_CODE=$($BINARY tx wasm store "/cw_unity_prop.wasm" --from validator $TXFLAG --output json | jq -r '.logs[0].events[-1].attributes[0].value')
+CONTRACT_CODE=$($BINARY tx wasm store "/cw_unity_prop.wasm" --from validator $TXFLAG --output json | jq -r '.logs[0].events[-1].attributes[-1].value')
 echo "Stored: $CONTRACT_CODE"
 
 BALANCE_2=$($BINARY q bank balances $VALIDATOR_ADDR)
